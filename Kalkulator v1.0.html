@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Multi-Angka Sederhana</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .calculator {
+            background: #0f1525;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 360px;
+            padding: 25px;
+            border: 1px solid #2a3a5a;
+        }
+        
+        .display {
+            background: #0a0e17;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5a;
+            text-align: right;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .expression {
+            color: #6c757d;
+            font-size: 1.1rem;
+            min-height: 28px;
+            word-wrap: break-word;
+            word-break: break-all;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .result {
+            color: #ffffff;
+            font-size: 2.5rem;
+            font-weight: 300;
+            word-wrap: break-word;
+            word-break: break-all;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        
+        .btn {
+            background: #1c2333;
+            border: 1px solid #2a3a5a;
+            color: #ffffff;
+            border-radius: 12px;
+            height: 65px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .btn:hover {
+            background: #2a3a5a;
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-number {
+            background: #25304a;
+            font-weight: 500;
+        }
+        
+        .btn-operator {
+            background: #3a4a6e;
+            color: #6c8cff;
+            font-weight: 500;
+        }
+        
+        .btn-clear {
+            background: #ff4757;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .btn-equals {
+            background: #6c8cff;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .btn-delete {
+            background: #ffa502;
+            color: white;
+        }
+        
+        .btn-large {
+            grid-column: span 2;
+        }
+        
+        @media (max-width: 400px) {
+            .calculator {
+                width: 100%;
+                max-width: 360px;
+                padding: 15px;
+            }
+            
+            .buttons-grid {
+                gap: 10px;
+            }
+            
+            .btn {
+                height: 60px;
+                font-size: 1.2rem;
+            }
+            
+            .result {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="expression" id="expression"></div>
+            <div class="result" id="result">0</div>
+        </div>
+        
+        <div class="buttons-grid">
+            <!-- Baris 1 -->
+            <div class="btn btn-clear" data-action="clear">AC</div>
+            <div class="btn btn-delete" data-action="delete"><i class="fas fa-backspace"></i></div>
+            <div class="btn btn-operator" data-action="%">%</div>
+            <div class="btn btn-operator" data-action="/">÷</div>
+            
+            <!-- Baris 2 -->
+            <div class="btn btn-number" data-value="7">7</div>
+            <div class="btn btn-number" data-value="8">8</div>
+            <div class="btn btn-number" data-value="9">9</div>
+            <div class="btn btn-operator" data-action="*">×</div>
+            
+            <!-- Baris 3 -->
+            <div class="btn btn-number" data-value="4">4</div>
+            <div class="btn btn-number" data-value="5">5</div>
+            <div class="btn btn-number" data-value="6">6</div>
+            <div class="btn btn-operator" data-action="-">−</div>
+            
+            <!-- Baris 4 -->
+            <div class="btn btn-number" data-value="1">1</div>
+            <div class="btn btn-number" data-value="2">2</div>
+            <div class="btn btn-number" data-value="3">3</div>
+            <div class="btn btn-operator" data-action="+">+</div>
+            
+            <!-- Baris 5 -->
+            <div class="btn btn-number btn-large" data-value="0">0</div>
+            <div class="btn btn-number" data-value=".">.</div>
+            <div class="btn btn-equals" data-action="=">=</div>
+        </div>
+    </div>
+
+    <script>
+        // Elemen DOM
+        const resultDisplay = document.getElementById('result');
+        const expressionDisplay = document.getElementById('expression');
+        
+        // State kalkulator
+        let currentInput = '0';
+        let expression = '';
+        let lastResult = null;
+        let lastOperator = null;
+        let shouldResetInput = false;
+        
+        // Format angka dengan pemisah ribuan
+        function formatNumber(num) {
+            if (isNaN(num) || !isFinite(num)) return String(num);
+            
+            // Untuk angka yang sangat besar atau kecil, gunakan notasi ilmiah
+            if (Math.abs(num) > 1e12 || (Math.abs(num) < 1e-6 && num !== 0)) {
+                return num.toExponential(6);
+            }
+            
+            // Format angka dengan pemisah ribuan
+            const parts = num.toString().split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            
+            // Batasi angka desimal
+            if (parts[1]) {
+                if (parts[1].length > 8) {
+                    parts[1] = parts[1].substring(0, 8);
+                }
+                
+                // Hapus trailing zeros
+                parts[1] = parts[1].replace(/0+$/, '');
+                if (parts[1].length === 0) {
+                    return parts[0];
+                }
+                
+                return parts[0] + '.' + parts[1];
+            }
+            
+            return parts[0];
+        }
+        
+        // Update tampilan
+        function updateDisplay() {
+            // Format angka di display hasil
+            if (currentInput === 'Error') {
+                resultDisplay.textContent = 'Error';
+                resultDisplay.style.color = '#ff4757';
+            } else {
+                const num = parseFloat(currentInput);
+                if (!isNaN(num)) {
+                    resultDisplay.textContent = formatNumber(num);
+                } else {
+                    resultDisplay.textContent = currentInput;
+                }
+                resultDisplay.style.color = '#ffffff';
+            }
+            
+            // Tampilkan ekspresi
+            expressionDisplay.textContent = expression || '';
+            
+            // Sesuaikan ukuran font jika teks terlalu panjang
+            if (resultDisplay.textContent.length > 12) {
+                resultDisplay.style.fontSize = '2rem';
+            } else if (resultDisplay.textContent.length > 8) {
+                resultDisplay.style.fontSize = '2.2rem';
+            } else {
+                resultDisplay.style.fontSize = '2.5rem';
+            }
+        }
+        
+        // Input angka
+        function inputNumber(num) {
+            if (shouldResetInput || currentInput === '0' || currentInput === 'Error') {
+                currentInput = num;
+                shouldResetInput = false;
+            } else {
+                // Batasi panjang input
+                if (currentInput.length < 15) {
+                    currentInput += num;
+                }
+            }
+            updateDisplay();
+        }
+        
+        // Input titik desimal
+        function inputDecimal() {
+            if (shouldResetInput || currentInput === 'Error') {
+                currentInput = '0.';
+                shouldResetInput = false;
+            } else if (!currentInput.includes('.')) {
+                currentInput += '.';
+            }
+            updateDisplay();
+        }
+        
+        // Input operator
+        function inputOperator(op) {
+            if (currentInput === 'Error') return;
+            
+            const operatorSymbols = {
+                '+': '+',
+                '-': '−',
+                '*': '×',
+                '/': '÷',
+                '%': '%'
+            };
+            
+            const operatorSymbol = operatorSymbols[op];
+            
+            // Jika sudah ada operator sebelumnya, hitung dulu
+            if (lastOperator && !shouldResetInput) {
+                calculate();
+            }
+            
+            // Tambahkan angka dan operator ke ekspresi
+            if (expression === '' || shouldResetInput) {
+                expression = currentInput + ' ' + operatorSymbol + ' ';
+            } else {
+                expression += currentInput + ' ' + operatorSymbol + ' ';
+            }
+            
+            lastOperator = op;
+            shouldResetInput = true;
+            updateDisplay();
+        }
+        
+        // Hitung hasil
+        function calculate() {
+            if (currentInput === 'Error' || !lastOperator) return;
+            
+            try {
+                // Buat ekspresi matematika untuk dihitung
+                let fullExpression = expression + currentInput;
+                
+                // Ganti simbol untuk evaluasi
+                fullExpression = fullExpression
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/−/g, '-')
+                    .replace(/%/g, '/100');
+                
+                // Evaluasi ekspresi
+                const result = eval(fullExpression);
+                
+                // Simpan hasil
+                lastResult = result;
+                currentInput = result.toString();
+                expression = fullExpression + ' =';
+                lastOperator = null;
+                shouldResetInput = true;
+            } catch (error) {
+                currentInput = 'Error';
+                expression = '';
+                lastOperator = null;
+            }
+            
+            updateDisplay();
+        }
+        
+        // Hitung persentase
+        function calculatePercentage() {
+            if (currentInput === 'Error') return;
+            
+            try {
+                const num = parseFloat(currentInput);
+                if (!isNaN(num)) {
+                    currentInput = (num / 100).toString();
+                    updateDisplay();
+                }
+            } catch (error) {
+                currentInput = 'Error';
+                updateDisplay();
+            }
+        }
+        
+        // Hapus semua
+        function clearAll() {
+            currentInput = '0';
+            expression = '';
+            lastResult = null;
+            lastOperator = null;
+            shouldResetInput = false;
+            updateDisplay();
+        }
+        
+        // Hapus karakter terakhir
+        function deleteLast() {
+            if (currentInput === 'Error' || shouldResetInput) {
+                clearAll();
+                return;
+            }
+            
+            if (currentInput.length > 1) {
+                currentInput = currentInput.slice(0, -1);
+            } else {
+                currentInput = '0';
+            }
+            updateDisplay();
+        }
+        
+        // Tangani klik tombol
+        function handleButtonClick(event) {
+            const button = event.currentTarget;
+            const value = button.getAttribute('data-value');
+            const action = button.getAttribute('data-action');
+            
+            if (value !== null) {
+                if (value === '.') {
+                    inputDecimal();
+                } else {
+                    inputNumber(value);
+                }
+            } else if (action !== null) {
+                switch (action) {
+                    case 'clear':
+                        clearAll();
+                        break;
+                    case 'delete':
+                        deleteLast();
+                        break;
+                    case '=':
+                        calculate();
+                        break;
+                    case '%':
+                        calculatePercentage();
+                        break;
+                    default:
+                        inputOperator(action);
+                        break;
+                }
+            }
+        }
+        
+        // Tangani input keyboard
+        function handleKeyboardInput(event) {
+            const key = event.key;
+            
+            // Angka 0-9
+            if (key >= '0' && key <= '9') {
+                inputNumber(key);
+                event.preventDefault();
+            }
+            
+            // Titik desimal
+            else if (key === '.' || key === ',') {
+                inputDecimal();
+                event.preventDefault();
+            }
+            
+            // Operator
+            else if (key === '+') {
+                inputOperator('+');
+                event.preventDefault();
+            }
+            else if (key === '-') {
+                inputOperator('-');
+                event.preventDefault();
+            }
+            else if (key === '*') {
+                inputOperator('*');
+                event.preventDefault();
+            }
+            else if (key === '/') {
+                inputOperator('/');
+                event.preventDefault();
+            }
+            else if (key === '%') {
+                calculatePercentage();
+                event.preventDefault();
+            }
+            
+            // Enter atau = untuk hasil
+            else if (key === 'Enter' || key === '=') {
+                calculate();
+                event.preventDefault();
+            }
+            
+            // Escape untuk AC
+            else if (key === 'Escape') {
+                clearAll();
+                event.preventDefault();
+            }
+            
+            // Backspace untuk delete
+            else if (key === 'Backspace') {
+                deleteLast();
+                event.preventDefault();
+            }
+        }
+        
+        // Inisialisasi
+        function init() {
+            // Setup event listeners untuk tombol
+            document.querySelectorAll('.btn').forEach(button => {
+                button.addEventListener('click', handleButtonClick);
+            });
+            
+            // Setup event listener untuk keyboard
+            document.addEventListener('keydown', handleKeyboardInput);
+            
+            // Update tampilan awal
+            updateDisplay();
+        }
+        
+        // Jalankan inisialisasi saat halaman dimuat
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
